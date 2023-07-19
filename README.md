@@ -1,0 +1,1 @@
+# go-seaweedfs-media-server
