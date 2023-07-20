@@ -10,8 +10,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-
-	"media-server/models"
 )
 
 var (
@@ -25,7 +23,7 @@ func get_seaweedfs_fid_and_url() (string, string, error) {
 	}
 	defer response.Body.Close()
 
-	var data models.MasterResponse
+	var data MasterResponse
 
 	err = json.NewDecoder(response.Body).Decode(&data)
 	if err != nil {
@@ -86,7 +84,7 @@ func upload_file_to_seaweedfs(fid string, url string, file multipart.File) ([]by
 	return responseBody, nil
 }
 
-func get_seaweedfs_file_location() (*models.Volume, error) {
+func get_seaweedfs_file_location() (*Volume, error) {
 	response, err := http.Get(fmt.Sprintf("%s%s", seaweedfs_master_url, "lookup?volumeId=3"))
 	if err != nil {
 		fmt.Println("Error sending GET request:", err)
@@ -94,7 +92,7 @@ func get_seaweedfs_file_location() (*models.Volume, error) {
 	}
 	defer response.Body.Close()
 
-	var d models.Volume
+	var d Volume
 
 	err = json.NewDecoder(response.Body).Decode(&d)
 	if err != nil {
@@ -105,7 +103,7 @@ func get_seaweedfs_file_location() (*models.Volume, error) {
 	return &d, nil
 }
 
-func download_seaweedfs_file(d *models.Volume, fid string) (*bytes.Buffer, error) {
+func download_seaweedfs_file(d *Volume, fid string) (*bytes.Buffer, error) {
 	response, err := http.Get(fmt.Sprintf("http://%s/%s", d.Locations[0].PublicURL, fid))
 	if err != nil {
 		fmt.Println("Error sending GET request:", err)
@@ -129,15 +127,17 @@ func download_seaweedfs_file(d *models.Volume, fid string) (*bytes.Buffer, error
 
 func main() {
 	r := gin.Default()
+	db := InitDB()
 	r.LoadHTMLGlob("templates/*.html")
-	// Define the upload function
+
 	index := func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{})
 	}
+
 	r.GET("/", index)
 	r.POST("/upload", func(c *gin.Context) {
 		// Read the image file from the form data
-		file, _, err := c.Request.FormFile("file")
+		file, fh, err := c.Request.FormFile("file")
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Error reading file: "+err.Error())
 			return
@@ -157,6 +157,11 @@ func main() {
 			c.String(http.StatusInternalServerError, "Error uploading file to SeaweedFS: "+err.Error())
 			return
 		}
+
+		f := FileRecord{FileName: fh.Filename, FID: fid}
+
+		db.Create(&f)
+
 		c.JSON(http.StatusOK, fid)
 
 	})
@@ -173,10 +178,14 @@ func main() {
 			return
 		}
 
-		// Set the response headers for downloading the file
-		// c.Header("Content-Disposition", "attachment; filename="+fid+".png")
 		c.Data(http.StatusOK, "application/octet-stream", buf.Bytes())
 
+	})
+
+	r.GET("/files", func(c *gin.Context) {
+		var file_records []FileRecord
+		db.Find(&file_records)
+		c.JSON(200, file_records)
 	})
 
 	r.Run(":8080")

@@ -1,4 +1,8 @@
-package models
+package main
+
+import (
+	"gorm.io/gorm"
+)
 
 type MasterResponse struct {
 	Count     int    `json:"count"`
@@ -15,4 +19,10 @@ type Location struct {
 type Volume struct {
 	VolumeID  string     `json:"volumeId"`
 	Locations []Location `json:"locations"`
+}
+
+type FileRecord struct {
+	gorm.Model
+	FID      string `json:"fid"`
+	FileName string `json:"fileName"`
 }
