@@ -1,4 +1,4 @@
-# go-seaweedfs-media-server
+# go-seaweedfs-file-server
 
 
 ```
