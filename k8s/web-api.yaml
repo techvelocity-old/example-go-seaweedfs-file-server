@@ -1,0 +1,38 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-api
+  labels:
+    app: web-api
+spec:
+  selector:
+    matchLabels:
+      api: web-api
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: web-api
+        api: web-api
+    spec:
+      containers:
+        - name: web-api
+          image: jdvincent/seaweedfs-web-api:latest
+          ports:
+            - name: web-api
+              containerPort: 8080
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-api
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: web-api
+  selector:
+    app: web-api
+  type: ClusterIP

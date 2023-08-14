@@ -6,8 +6,8 @@ configurations:
     name: Run with Velocity
     language: go
     build:
-      dockerfile-path: ./media/Dockerfile
-      build-context-path: ./media
+      dockerfile-path: ./web-api/Dockerfile
+      build-context-path: ./web-api
       executable-path: ""
     hooks:
       - on-event: before-build

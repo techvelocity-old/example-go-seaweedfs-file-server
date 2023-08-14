@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 var (
@@ -125,17 +126,21 @@ func download_seaweedfs_file(d *Volume, fid string) (*bytes.Buffer, error) {
 
 }
 
+func get_seaweedfs_file_name(db *gorm.DB, fid string) (string, error) {
+	file_record := FileRecord{}
+	result := db.First(&file_record, "f_id = ?", fid)
+	if result.Error != nil {
+		log.Printf("Failed to get file record by FID: %v", result.Error)
+		return "", result.Error
+	}
+	return file_record.FileName, nil
+}
+
 func main() {
 	r := gin.Default()
 	db := InitDB()
-	r.LoadHTMLGlob("templates/*.html")
 
-	index := func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", gin.H{})
-	}
-
-	r.GET("/", index)
-	r.POST("/upload", func(c *gin.Context) {
+	r.POST("/api/upload", func(c *gin.Context) {
 		// Read the image file from the form data
 		file, fh, err := c.Request.FormFile("file")
 		if err != nil {
@@ -165,24 +170,41 @@ func main() {
 		c.JSON(http.StatusOK, fid)
 
 	})
-	r.POST("/download", func(c *gin.Context) {
-		fid := c.Request.FormValue("fid")
+	r.GET("/api/download/:fid", func(c *gin.Context) {
+		fid := c.Param("fid")
 		file_location, err := get_seaweedfs_file_location()
 		if err != nil {
 			log.Println(err)
+			c.String(http.StatusInternalServerError, "Error getting file from SeaweedFS")
 			return
 		}
 		buf, err := download_seaweedfs_file(file_location, fid)
 		if err != nil {
 			log.Println(err)
+			c.String(http.StatusInternalServerError, "Error downloading file from SeaweedFS")
 			return
 		}
 
-		c.Data(http.StatusOK, "application/octet-stream", buf.Bytes())
+		file_name, err := get_seaweedfs_file_name(db, fid)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 
+		// Set the appropriate headers for file download
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", file_name))
+		c.Header("Content-Type", "application/octet-stream")
+		c.Header("Content-Length", fmt.Sprint(buf.Len()))
+
+		// Write the buffer directly to the response writer
+		if _, err := buf.WriteTo(c.Writer); err != nil {
+			log.Println(err)
+			c.String(http.StatusInternalServerError, "Error writing file to response")
+			return
+		}
 	})
 
-	r.GET("/files", func(c *gin.Context) {
+	r.GET("/api/files", func(c *gin.Context) {
 		var file_records []FileRecord
 		db.Find(&file_records)
 		c.JSON(200, file_records)
