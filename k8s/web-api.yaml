@@ -18,7 +18,21 @@ spec:
     spec:
       containers:
         - name: web-api
-          image: jdvincent/seaweedfs-web-api:latest
+          image: seaweedfs-web-api:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              value: "postgres"
+            - name: POSTGRES_DB
+              value: "files_db"
+            - name: POSTGRES_HOST
+              value: "postgres"
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: SEAWEED_MASTER_URL
+              value: "http://seaweedfs-master:9333/dir/"
           ports:
             - name: web-api
               containerPort: 8080

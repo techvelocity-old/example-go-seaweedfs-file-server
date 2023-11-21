@@ -50,7 +50,6 @@ spec:
             - name: POSTGRESQL_DATABASE
               value: "files_db"
           image: bitnami/postgresql:13.2.0
-          imagePullPolicy: IfNotPresent
           name: postgres
           ports:
             - containerPort: 5432

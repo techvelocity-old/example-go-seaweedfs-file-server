@@ -1,0 +1,9 @@
+master:
+  nodeSelector: |
+    kubernetes.io/arch: arm64
+volume:
+  nodeSelector: |
+   kubernetes.io/arch: arm64
+filer:
+  nodeSelector: |
+    kubernetes.io/arch: arm64

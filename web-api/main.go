@@ -8,16 +8,17 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 var (
-	seaweedfs_master_url = "http://seaweedfs-master:9333/dir/"
+	seaweedfs_master_url = os.Getenv("SEAWEED_MASTER_URL")
 )
 
-func get_seaweedfs_fid_and_url() (string, string, error) {
+func getSeaweedfsFidAndUrl() (string, string, error) {
 	response, err := http.Get(fmt.Sprintf("%s%s", seaweedfs_master_url, "assign"))
 	if err != nil {
 		return "", "", fmt.Errorf("error sending GET request: %w", err)
@@ -37,7 +38,7 @@ func get_seaweedfs_fid_and_url() (string, string, error) {
 	return fid, url, nil
 }
 
-func upload_file_to_seaweedfs(fid string, url string, file multipart.File) ([]byte, error) {
+func uploadFileToSeaweedfs(fid string, url string, file multipart.File) ([]byte, error) {
 	// Create a new buffer to store the multipart request body
 	body := new(bytes.Buffer)
 	writer := multipart.NewWriter(body)
@@ -85,7 +86,7 @@ func upload_file_to_seaweedfs(fid string, url string, file multipart.File) ([]by
 	return responseBody, nil
 }
 
-func get_seaweedfs_file_location() (*Volume, error) {
+func getSeaweedfsFileLocation() (*Volume, error) {
 	response, err := http.Get(fmt.Sprintf("%s%s", seaweedfs_master_url, "lookup?volumeId=3"))
 	if err != nil {
 		fmt.Println("Error sending GET request:", err)
@@ -104,7 +105,7 @@ func get_seaweedfs_file_location() (*Volume, error) {
 	return &d, nil
 }
 
-func download_seaweedfs_file(d *Volume, fid string) (*bytes.Buffer, error) {
+func downloadSeaweedfsFile(d *Volume, fid string) (*bytes.Buffer, error) {
 	response, err := http.Get(fmt.Sprintf("http://%s/%s", d.Locations[0].PublicURL, fid))
 	if err != nil {
 		fmt.Println("Error sending GET request:", err)
@@ -126,7 +127,7 @@ func download_seaweedfs_file(d *Volume, fid string) (*bytes.Buffer, error) {
 
 }
 
-func get_seaweedfs_file_name(db *gorm.DB, fid string) (string, error) {
+func getSeaweedfsFileName(db *gorm.DB, fid string) (string, error) {
 	file_record := FileRecord{}
 	result := db.First(&file_record, "f_id = ?", fid)
 	if result.Error != nil {
@@ -150,13 +151,13 @@ func main() {
 
 		fmt.Println(file)
 
-		fid, url, err := get_seaweedfs_fid_and_url()
+		fid, url, err := getSeaweedfsFidAndUrl()
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Error getting SeaweedFS FID and URL: "+err.Error())
 			return
 		}
 
-		responseBody, err := upload_file_to_seaweedfs(fid, url, file)
+		responseBody, err := uploadFileToSeaweedfs(fid, url, file)
 		fmt.Println(responseBody)
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Error uploading file to SeaweedFS: "+err.Error())
@@ -172,20 +173,20 @@ func main() {
 	})
 	r.GET("/api/download/:fid", func(c *gin.Context) {
 		fid := c.Param("fid")
-		file_location, err := get_seaweedfs_file_location()
+		file_location, err := getSeaweedfsFileLocation()
 		if err != nil {
 			log.Println(err)
 			c.String(http.StatusInternalServerError, "Error getting file from SeaweedFS")
 			return
 		}
-		buf, err := download_seaweedfs_file(file_location, fid)
+		buf, err := downloadSeaweedfsFile(file_location, fid)
 		if err != nil {
 			log.Println(err)
 			c.String(http.StatusInternalServerError, "Error downloading file from SeaweedFS")
 			return
 		}
 
-		file_name, err := get_seaweedfs_file_name(db, fid)
+		file_name, err := getSeaweedfsFileName(db, fid)
 		if err != nil {
 			log.Println(err)
 			return

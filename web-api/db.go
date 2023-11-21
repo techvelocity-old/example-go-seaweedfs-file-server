@@ -3,17 +3,18 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 var (
-	postgres_user     = "postgres"
-	postgres_password = "postgres"
-	postgres_db       = "files_db"
-	postgres_host     = "postgres"
-	postgres_port     = "5432"
+	postgres_user     = os.Getenv("POSTGRES_USER")
+	postgres_password = os.Getenv("POSTGRES_PASSWORD")
+	postgres_db       = os.Getenv("POSTGRES_DB")
+	postgres_host     = os.Getenv("POSTGRES_HOST")
+	postgres_port     = os.Getenv("POSTGRES_PORT")
 	postgres_uri      = fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable", postgres_user, postgres_password, postgres_host, postgres_port, postgres_db)
 )
 
